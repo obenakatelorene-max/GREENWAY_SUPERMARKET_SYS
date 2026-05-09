@@ -1,0 +1,34 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@400;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", var(--font-sans);
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  /* Natural Tones Palette */
+  --color-natural-50: #F7F7F2;
+  --color-natural-100: #F0F0E8;
+  --color-natural-200: #E6E6DE;
+  --color-natural-300: #D4D4C8;
+  --color-natural-400: #A8A899;
+  --color-natural-500: #7A7A6E;
+  --color-natural-600: #5A5A40;
+  --color-natural-700: #3D3D33;
+  --color-natural-800: #2D2D24;
+
+  --color-sage: #8A9A5B;
+  --color-rust: #BC6C25;
+  --color-tan: #D4A373;
+}
+
+@layer base {
+  body {
+    @apply bg-natural-50 text-natural-700 antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display tracking-tight text-natural-800;
+  }
+}

@@ -58,9 +58,10 @@ export function Expenses() {
         status: 'paid'
       });
       fetchExpenses();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding expense:', error);
-      alert('Failed to log expense.');
+      const message = error?.message || 'Check your database connection.';
+      alert(`Failed to log expense: ${message}`);
     }
   };
 

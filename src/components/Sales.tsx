@@ -86,9 +86,10 @@ export function Sales() {
         setIsSuccess(false);
         setCart([]);
       }, 3000);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Checkout error:', error);
-      alert('Checkout failed. Please try again.');
+      const message = error?.message || 'Please check your connection and stock levels.';
+      alert(`Checkout failed: ${message}`);
     }
   };
 

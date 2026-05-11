@@ -62,9 +62,10 @@ export function Inventory() {
         min_stock_level: 5
       });
       fetchProducts();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error adding product:', error);
-      alert('Failed to add product. Check SKU uniqueness.');
+      const message = error?.message || 'Check SKU uniqueness or database connection.';
+      alert(`Failed to add product: ${message}`);
     }
   };
 

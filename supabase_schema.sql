@@ -3,7 +3,7 @@
 
 -- 1. PRODUCTS TABLE
 CREATE TABLE IF NOT EXISTS products (
-  id UUID PRIMARY KEY DEFAULT auth.uid(), -- Or gen_random_uuid() for public access
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   sku TEXT UNIQUE NOT NULL,
   category TEXT NOT NULL,

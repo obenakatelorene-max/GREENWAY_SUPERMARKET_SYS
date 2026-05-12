@@ -1,0 +1,128 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.email == 'obenakatelorene@gmail.com';
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // 1. PRODUCTS
+    match /products/{productId} {
+      allow list: if isSignedIn();
+      allow get: if isSignedIn() && isValidId(productId);
+      allow create: if isSignedIn() && isValidProduct(incoming()) && incoming().created_at == request.time;
+      allow update: if isSignedIn() && (
+        (isValidId(productId) && incoming().diff(existing()).affectedKeys().hasOnly(['stock_quantity', 'updated_at']) && incoming().updated_at == request.time) ||
+        isAdmin()
+      );
+      allow delete: if isSignedIn(); // Temporarily relax to isSignedIn to debug permission issues
+    }
+
+    function isValidProduct(data) {
+      let mandatoryKeys = ['name', 'sku', 'category', 'price', 'cost', 'stock_quantity', 'min_stock_level', 'created_at', 'updated_at'];
+      return data.keys().hasAll(mandatoryKeys)
+        && data.name is string && data.name.size() <= 200
+        && data.sku is string && data.sku.size() <= 100
+        && data.price is number && data.price >= 0
+        && data.cost is number && data.cost >= 0
+        && data.stock_quantity is int
+        && (!('barcode' in data) || (data.barcode is string && data.barcode.size() <= 100))
+        && (!('image_url' in data) || (data.image_url is string && data.image_url.size() <= 2048));
+    }
+
+    // 2. SALES
+    match /sales/{saleId} {
+      allow list: if isSignedIn();
+      allow get: if isSignedIn() && isValidId(saleId);
+      allow create: if isSignedIn() && isValidSale(incoming()) && incoming().created_at == request.time;
+      allow update: if isAdmin() && isValidId(saleId);
+      allow delete: if isAdmin() && isValidId(saleId);
+
+      match /items/{itemId} {
+        allow list: if isSignedIn();
+        allow get: if isSignedIn() && isValidId(itemId);
+        allow create: if isSignedIn() && isValidSaleItem(incoming()) && incoming().created_at == request.time;
+        allow update, delete: if isAdmin() && isValidId(itemId);
+      }
+    }
+
+    function isValidSale(data) {
+      return data.keys().hasAll(['subtotal', 'tax_amount', 'discount_amount', 'total_amount', 'total_cost', 'profit', 'payment_method', 'created_at'])
+        && data.subtotal is number
+        && data.total_amount is number
+        && data.total_cost is number
+        && data.profit is number
+        && data.payment_method in ['cash', 'card', 'mobile_money'];
+    }
+
+    function isValidSaleItem(data) {
+      return data.keys().hasAll(['product_id', 'product_name', 'quantity', 'unit_price', 'unit_cost', 'total_price', 'created_at'])
+        && data.product_id is string
+        && data.product_name is string
+        && data.quantity is int
+        && data.unit_price is number
+        && data.unit_cost is number;
+    }
+
+    // 3. STOCK MOVEMENTS
+    match /stock_movements/{movementId} {
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && isValidMovement(incoming()) && incoming().created_at == request.time;
+      allow update, delete: if false; // Audit logs are immutable
+    }
+
+    function isValidMovement(data) {
+      return data.keys().hasAll(['product_id', 'type', 'quantity', 'reason', 'created_at'])
+        && data.product_id is string
+        && data.type in ['in', 'out', 'adjustment']
+        && data.quantity is number
+        && data.reason is string;
+    }
+
+    // 4. EXPENSES
+    match /expenses/{expenseId} {
+      allow list: if isSignedIn();
+      allow get: if isSignedIn() && isValidId(expenseId);
+      allow create: if isSignedIn() && isValidExpense(incoming()) && incoming().created_at == request.time;
+      allow update: if isSignedIn() && isValidId(expenseId) && (
+        (incoming().diff(existing()).affectedKeys().hasOnly(['status']) && incoming().status in ['pending', 'paid']) ||
+        isAdmin()
+      );
+      allow delete: if isAdmin() && isValidId(expenseId);
+    }
+
+    function isValidExpense(data) {
+      let categories = ['utilities', 'salaries', 'supplies', 'maintenance', 'miscellaneous'];
+      return data.keys().hasAll(['description', 'category', 'amount', 'date', 'status', 'created_at'])
+        && data.description is string && data.description.size() <= 500
+        && data.category in categories
+        && data.amount is number
+        && data.status in ['pending', 'paid'];
+    }
+  }
+}

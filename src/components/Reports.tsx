@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   BarChart, 
   Bar, 
@@ -12,7 +12,6 @@ import {
   Cell,
   LineChart,
   Line,
-  Legend
 } from 'recharts';
 import { 
   Download, 
@@ -20,29 +19,50 @@ import {
   Table as TableIcon, 
   Presentation,
   Calendar,
-  Filter
+  BarChart as BarChartIcon,
+  TrendingDown,
+  Warehouse,
+  History
 } from 'lucide-react';
 import { cn } from '../lib/utils';
-
-const revenueData = [
-  { month: 'Jan', sales: 45000, expenses: 32000, profit: 13000 },
-  { month: 'Feb', sales: 52000, expenses: 34000, profit: 18000 },
-  { month: 'Mar', sales: 48000, expenses: 31000, profit: 17000 },
-  { month: 'Apr', sales: 61000, expenses: 38000, profit: 23000 },
-  { month: 'May', sales: 55000, expenses: 35000, profit: 20000 },
-  { month: 'Jun', sales: 67000, expenses: 40000, profit: 27000 },
-];
-
-const categoryData = [
-  { name: 'Dairy', value: 35 },
-  { name: 'Produce', value: 25 },
-  { name: 'Bakery', value: 15 },
-  { name: 'Meat', value: 20 },
-  { name: 'Canned', value: 5 },
-];
+import { dbService } from '../services/dbService';
+import { format } from 'date-fns';
 
 export function Reports() {
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const COLORS = ['#5A5A40', '#8A9A5B', '#BC6C25', '#D4A373', '#7A7A6E'];
+
+  useEffect(() => {
+    async function loadReports() {
+      try {
+        const reportData = await dbService.getReportData();
+        setData(reportData);
+      } catch (error) {
+        console.error('Error loading reports:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadReports();
+  }, []);
+
+  const categoryData = [
+    { name: 'Dairy', value: 35 },
+    { name: 'Produce', value: 25 },
+    { name: 'Bakery', value: 15 },
+    { name: 'Meat', value: 20 },
+    { name: 'General', value: 5 },
+  ];
+
+  if (loading) {
+     return (
+        <div className="h-full flex flex-col items-center justify-center text-natural-400 gap-4">
+           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-natural-600"></div>
+           <span className="font-bold uppercase tracking-widest text-xs">Generating Reports...</span>
+        </div>
+     );
+  }
 
   return (
     <div className="space-y-10 animate-in fade-in duration-700 pb-12">
@@ -54,7 +74,7 @@ export function Reports() {
         <div className="flex gap-3">
            <div className="flex items-center gap-2 bg-white border border-natural-200 rounded-xl px-4 py-2 text-sm font-bold text-natural-600 shadow-sm">
              <Calendar className="h-4 w-4 text-natural-400" />
-             Jan 1 - Jun 30, 2024
+             {format(new Date(), 'MMM yyyy')} • Life History
            </div>
            <button className="inline-flex items-center gap-2 bg-natural-600 text-white px-6 py-3 rounded-xl font-bold text-sm shadow-xl shadow-natural-600/20 hover:bg-natural-700 transition-all">
              <Download className="h-4 w-4" />
@@ -68,7 +88,7 @@ export function Reports() {
            <div className="flex items-center justify-between mb-10">
               <div>
                  <h3 className="text-2xl font-bold text-natural-800 font-display">Revenue vs Profit</h3>
-                 <p className="text-sm text-natural-400 font-semibold tracking-wide uppercase">Year-to-date performance</p>
+                 <p className="text-sm text-natural-400 font-semibold tracking-wide uppercase">Historical Growth</p>
               </div>
               <div className="flex items-center gap-6">
                 <div className="flex items-center gap-2">
@@ -81,9 +101,9 @@ export function Reports() {
                 </div>
               </div>
            </div>
-           <div className="h-[400px]">
+           <div className="h-[400px] min-h-[400px]">
               <ResponsiveContainer width="100%" height="100%">
-                 <LineChart data={revenueData}>
+                 <LineChart data={data?.revenueData}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E6E6DE" />
                     <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#A8A899', fontSize: 11, fontWeight: 600}} />
                     <YAxis axisLine={false} tickLine={false} tick={{fill: '#A8A899', fontSize: 11, fontWeight: 600}} />
@@ -139,10 +159,10 @@ export function Reports() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
          {[
-           { label: 'Avg Ticket Size', value: '$84.20', trend: '+2.1%', sub: 'vs last month', icon: FileText, color: 'bg-natural-600' },
-           { label: 'Customer Retention', value: '72%', trend: '+5.4%', sub: 'of active users', icon: Presentation, color: 'bg-sage' },
-           { label: 'COGS Ratio', value: '0.62', trend: '-0.02', sub: 'efficiency metric', icon: TableIcon, color: 'bg-rust' },
-           { label: 'Inventory Turnover', value: '14.5x', trend: '+1.2x', sub: 'annualized', icon: BarChart, color: 'bg-tan' }
+           { label: 'Capital in Stock', value: `$${data?.totalStockValue.toLocaleString()}`, trend: 'Asset', sub: 'Current inventory cost', icon: Warehouse, color: 'bg-natural-800' },
+           { label: 'Potential Margin', value: `$${data?.potentialProfit.toLocaleString()}`, trend: 'Unrealized', sub: 'Projected net profit', icon: TrendingDown, color: 'bg-sage' },
+           { label: 'Active Catalog', value: `${data?.productCount}`, trend: 'Items', sub: 'Total active SKUs', icon: TableIcon, color: 'bg-natural-600' },
+           { label: 'Recent Velocity', value: `${data?.recentSales.length}`, trend: 'Sales', sub: 'Last 100 transactions', icon: History, color: 'bg-tan' }
          ].map((stat, i) => (
            <div key={i} className="bg-white p-7 rounded-[32px] border border-natural-200 shadow-sm group hover:border-natural-400 transition-all hover:-translate-y-1">
               <div className={cn("h-12 w-12 rounded-2xl flex items-center justify-center mb-6 text-white shadow-lg shadow-black/5 transition-transform group-hover:scale-110", stat.color)}>
@@ -151,7 +171,7 @@ export function Reports() {
               <h4 className="text-[10px] font-bold text-natural-400 uppercase tracking-widest">{stat.label}</h4>
               <p className="text-3xl font-bold text-natural-800 mt-1 font-display tracking-tight leading-none">{stat.value}</p>
               <div className="mt-5 flex items-center justify-between pt-4 border-t border-natural-100">
-                 <span className="text-sage text-xs font-bold">{stat.trend}</span>
+                 <span className="text-sage text-xs font-bold uppercase tracking-widest">{stat.trend}</span>
                  <span className="text-natural-400 text-[9px] uppercase font-bold tracking-widest">{stat.sub}</span>
               </div>
            </div>

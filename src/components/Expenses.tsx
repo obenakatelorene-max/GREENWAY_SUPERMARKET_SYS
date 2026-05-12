@@ -6,7 +6,9 @@ import {
   TrendingDown,
   Download,
   X,
-  ArrowUpRight
+  ArrowUpRight,
+  Trash2,
+  AlertCircle
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { dbService } from '../services/dbService';
@@ -21,13 +23,23 @@ export function Expenses() {
   // New expense form state
   const [newExpense, setNewExpense] = useState({
     description: '',
-    category: 'Operational',
+    category: 'Miscellaneous' as any,
     amount: 0,
     date: new Date().toISOString().split('T')[0],
     status: 'paid' as 'paid' | 'pending'
   });
 
-  const categories = ['Rent', 'Utilities', 'Inventory', 'Staff', 'Advertising', 'Maintenance', 'Operational'];
+  const categories = [
+    'Inventory', 
+    'Utilities', 
+    'Payroll', 
+    'Rent', 
+    'Maintenance', 
+    'Marketing', 
+    'Taxes', 
+    'Insurance', 
+    'Miscellaneous'
+  ];
 
   useEffect(() => {
     fetchExpenses();
@@ -52,7 +64,7 @@ export function Expenses() {
       setIsModalOpen(false);
       setNewExpense({
         description: '',
-        category: 'Operational',
+        category: 'Miscellaneous',
         amount: 0,
         date: new Date().toISOString().split('T')[0],
         status: 'paid'
@@ -62,6 +74,18 @@ export function Expenses() {
       console.error('Error adding expense:', error);
       const message = error?.message || 'Check your database connection.';
       alert(`Failed to log expense: ${message}`);
+    }
+  };
+
+  const handleDelete = async (id: string, description: string) => {
+    if (!window.confirm(`Are you sure you want to delete the expense for "${description}"?`)) return;
+    
+    try {
+      await dbService.deleteExpense(id);
+      fetchExpenses();
+    } catch (error: any) {
+      console.error('Error deleting expense:', error);
+      alert('Failed to delete expense. Please try again.');
     }
   };
 
@@ -125,7 +149,7 @@ export function Expenses() {
                   <select 
                     className="w-full px-4 py-3 bg-natural-50 border border-natural-200 rounded-xl focus:ring-2 focus:ring-natural-600/10 focus:border-natural-600 outline-none transition-all"
                     value={newExpense.category}
-                    onChange={(e) => setNewExpense({...newExpense, category: e.target.value})}
+                    onChange={(e) => setNewExpense({...newExpense, category: e.target.value as any})}
                   >
                     {categories.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
@@ -186,11 +210,11 @@ export function Expenses() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         <div className="bg-white p-8 rounded-[32px] border border-natural-200 shadow-sm relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-24 h-24 bg-natural-50 rounded-bl-[48px] -mr-8 -mt-8 transition-transform group-hover:scale-110"></div>
-          <p className="text-[10px] font-bold text-natural-400 uppercase tracking-widest mb-2 relative z-10">Total Monthly</p>
+          <p className="text-[10px] font-bold text-natural-400 uppercase tracking-widest mb-2 relative z-10">Total Expenses</p>
           <h3 className="text-3xl font-bold text-natural-800 font-display relative z-10">${totalExpenses.toLocaleString()}</h3>
           <div className="mt-4 flex items-center gap-2 text-sage text-sm font-bold relative z-10">
             <TrendingDown className="h-4 w-4" />
-            -2.4% vs last month
+            Business Overhead
           </div>
         </div>
         <div className="bg-white p-8 rounded-[32px] border border-natural-200 shadow-sm relative overflow-hidden group">
@@ -198,20 +222,21 @@ export function Expenses() {
           <p className="text-[10px] font-bold text-natural-400 uppercase tracking-widest mb-2 relative z-10">Pending Approval</p>
           <h3 className="text-3xl font-bold text-rust font-display relative z-10">${pendingAmount.toLocaleString()}</h3>
           <div className="mt-4 flex items-center gap-2 text-natural-400 text-sm font-bold relative z-10">
-             Next due in 3 days
+             <AlertCircle className="h-4 w-4" />
+             Awaiting payment
           </div>
         </div>
         <div className="bg-natural-600 p-8 rounded-[32px] shadow-xl shadow-natural-600/20 relative overflow-hidden group">
            <div className="relative z-10">
-            <h3 className="text-[10px] font-bold text-natural-100 uppercase tracking-widest mb-2">Operating Budget</h3>
-            <p className="text-3xl font-bold text-white font-display">$25,000</p>
+            <h3 className="text-[10px] font-bold text-natural-100 uppercase tracking-widest mb-2">Operating Efficiency</h3>
+            <p className="text-3xl font-bold text-white font-display">Target 75%</p>
             <div className="mt-8 flex flex-col gap-2">
                <div className="flex justify-between text-[10px] font-bold text-natural-100 uppercase tracking-widest">
-                  <span>Usage Rate</span>
-                  <span>{Math.round((totalExpenses / 25000) * 100)}%</span>
+                  <span>Usage Stability</span>
+                  <span>Normal</span>
                </div>
                <div className="h-2 w-full bg-natural-700 rounded-full overflow-hidden">
-                  <div className="h-full bg-sage rounded-full transition-all duration-1000" style={{ width: `${(totalExpenses / 25000) * 100}%` }} />
+                  <div className="h-full bg-sage rounded-full transition-all duration-1000 w-[65%]" />
                </div>
             </div>
            </div>
@@ -242,18 +267,19 @@ export function Expenses() {
                 <th className="px-8 py-5 font-bold">Logged Date</th>
                 <th className="px-8 py-5 font-bold text-right">Debit Amount</th>
                 <th className="px-8 py-5 font-bold text-center">Status</th>
+                <th className="px-8 py-5 font-bold text-center">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-natural-100">
               {loading ? (
                 <tr>
-                   <td colSpan={5} className="px-8 py-20 text-center text-natural-400 font-medium">
+                   <td colSpan={6} className="px-8 py-20 text-center text-natural-400 font-medium">
                       Loading expenses...
                    </td>
                 </tr>
               ) : filteredExpenses.length === 0 ? (
                 <tr>
-                   <td colSpan={5} className="px-8 py-20 text-center text-natural-400 font-medium">
+                   <td colSpan={6} className="px-8 py-20 text-center text-natural-400 font-medium">
                       No expenses found.
                    </td>
                 </tr>
@@ -278,6 +304,15 @@ export function Expenses() {
                       )}>
                       {expense.status}
                     </span>
+                  </td>
+                  <td className="px-8 py-5 text-center">
+                    <button 
+                      onClick={() => handleDelete(expense.id, expense.description)}
+                      className="p-2 text-natural-300 hover:text-rust hover:bg-rust/5 rounded-lg transition-all"
+                      title="Delete Expense"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </td>
                 </tr>
               ))}

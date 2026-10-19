@@ -52,7 +52,7 @@ export function Login() {
             <div className="w-px h-10 bg-natural-100"></div>
             <div className="text-center">
               <div className="text-xl font-bold text-natural-800">SSL</div>
-              <div className="text-[10px] font-bold text-natural-400 uppercase">Encrypted</div>
+              <div className="text-[10px] font-bold text-natural-400 uppercase">ENCRYPTED</div>
             </div>
             <div className="w-px h-10 bg-natural-100"></div>
             <div className="text-center">
